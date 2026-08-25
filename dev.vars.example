@@ -1,0 +1,10 @@
+# این فایل رو کپی کن به نام .dev.vars و مقادیر واقعی رو جایگزین کن
+# cp .dev.vars.example .dev.vars
+#
+# توجه: .dev.vars فقط برای اجرای لوکال (wrangler dev) استفاده می‌شه.
+# برای سرور واقعی Cloudflare باید از دستور "wrangler secret put" استفاده کنی.
+
+BALE_TOKEN=your_bale_bot_token_here
+
+# اختیاری - برای امن‌تر کردن webhook (اختیاری ولی پیشنهادی)
+WEBHOOK_SECRET=a_random_secret_string_you_choose
