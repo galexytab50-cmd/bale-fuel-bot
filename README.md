@@ -38,25 +38,36 @@ npm install
 npx wrangler login
 ```
 
-## مرحله ۳: ساخت KV Namespace
+## مرحله ۳: ساخت دیتابیس D1
 
 بات برای نگه‌داشتن وضعیت مکالمه هر کاربر (اینکه الان توی چه مرحله‌ایه) از
-Cloudflare KV استفاده می‌کنه:
+Cloudflare D1 (دیتابیس SQLite) استفاده می‌کنه:
 
 ```bash
-npx wrangler kv namespace create BOT_STATE
+npx wrangler d1 create bale-fuel-bot-db
 ```
 
 خروجی این دستور چیزی شبیه این می‌ده:
 
 ```
-[[kv_namespaces]]
-binding = "BOT_STATE"
-id = "abcd1234..."
+[[d1_databases]]
+binding = "DB"
+database_name = "bale-fuel-bot-db"
+database_id = "abcd1234-..."
 ```
 
-مقدار `id` رو کپی کن و داخل فایل `wrangler.toml` جایگزین `YOUR_KV_NAMESPACE_ID`
-کن.
+مقدار `database_id` رو کپی کن و داخل فایل `wrangler.toml` جایگزین
+`YOUR_D1_DATABASE_ID` کن.
+
+بعد جدول لازم رو با فایل `schema.sql` بساز:
+
+```bash
+# روی دیتابیس واقعی (remote) - چیزی که Worker ازش استفاده می‌کنه
+npx wrangler d1 execute bale-fuel-bot-db --remote --file=./schema.sql
+
+# اختیاری: برای تست لوکال هم بسازش
+npx wrangler d1 execute bale-fuel-bot-db --local --file=./schema.sql
+```
 
 ## مرحله ۴: تنظیم توکن بات
 
@@ -142,9 +153,10 @@ npx wrangler tail
 bale-fuel-bot-ts/
 ├── src/
 │   └── index.ts          # کد اصلی بات (Worker)
+├── schema.sql             # ساختار جدول دیتابیس D1
 ├── package.json
 ├── tsconfig.json
-├── wrangler.toml          # تنظیمات Cloudflare (KV namespace و ...)
+├── wrangler.toml          # تنظیمات Cloudflare (D1 database و ...)
 ├── .dev.vars.example      # نمونه متغیرهای محیطی برای تست لوکال
 ├── .gitignore
 └── README.md
