@@ -3,16 +3,21 @@ main = "src/index.ts"
 compatibility_date = "2024-09-25"
 
 # ---------------------------------------------------------------------------
-# KV Namespace: برای نگه‌داشتن وضعیت مکالمه هر کاربر (چون Worker حالت رو
+# D1 Database: برای نگه‌داشتن وضعیت مکالمه هر کاربر (چون Worker حالت رو
 # بین درخواست‌ها نگه نمی‌داره، باید تو یه جای بیرونی ذخیره بشه).
 #
 # مراحل ساخت:
-#   npx wrangler kv namespace create BOT_STATE
-# خروجی این دستور یه id بهت میده که باید جایگزین YOUR_KV_NAMESPACE_ID بشه.
+#   npx wrangler d1 create bale-fuel-bot-db
+# خروجی این دستور یه database_id بهت میده که باید جایگزین
+# YOUR_D1_DATABASE_ID بشه.
+#
+# بعد از ساخت، جدول لازم رو با این دستور بساز:
+#   npx wrangler d1 execute bale-fuel-bot-db --file=./schema.sql --remote
 # ---------------------------------------------------------------------------
-[[kv_namespaces]]
-binding = "BOT_STATE"
-id = "YOUR_KV_NAMESPACE_ID"
+[[d1_databases]]
+binding = "DB"
+database_name = "bale-fuel-bot-db"
+database_id = "YOUR_D1_DATABASE_ID"
 
 # ---------------------------------------------------------------------------
 # متغیر محیطی توکن بات:
