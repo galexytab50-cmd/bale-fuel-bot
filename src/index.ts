@@ -10,7 +10,7 @@
 
 export interface Env {
 	BALE_TOKEN: string;
-	BOT_STATE: KVNamespace;
+	DB: D1Database;
 	/** اختیاری: اگه ست بشه، درخواست‌های webhook با این توکن راستی‌آزمایی می‌شن */
 	WEBHOOK_SECRET?: string;
 }
@@ -67,7 +67,7 @@ const PETROL_PRICE_PER_LITER: number | null = null;
 const GAS_PRICE_PER_M3: number | null = null;
 
 // ---------------------------------------------------------------------------
-// مدیریت وضعیت مکالمه (State Machine) - داخل KV ذخیره می‌شه
+// مدیریت وضعیت مکالمه (State Machine) - داخل D1 ذخیره می‌شه
 // ---------------------------------------------------------------------------
 
 type Step = 'car' | 'daily_km' | 'days_per_week' | 'driving_style';
@@ -80,22 +80,57 @@ interface ConversationState {
 	drivingStyle?: string;
 }
 
-function stateKey(chatId: number): string {
-	return `chat:${chatId}`;
+interface ConversationRow {
+	chat_id: number;
+	step: Step;
+	car: string | null;
+	daily_km: number | null;
+	days_per_week: number | null;
+	driving_style: string | null;
 }
 
 async function getState(env: Env, chatId: number): Promise<ConversationState | null> {
-	const raw = await env.BOT_STATE.get(stateKey(chatId));
-	return raw ? (JSON.parse(raw) as ConversationState) : null;
+	const row = await env.DB.prepare('SELECT step, car, daily_km, days_per_week, driving_style FROM conversation_state WHERE chat_id = ?')
+		.bind(chatId)
+		.first<ConversationRow>();
+
+	if (!row) return null;
+
+	return {
+		step: row.step,
+		car: row.car ?? undefined,
+		dailyKm: row.daily_km ?? undefined,
+		daysPerWeek: row.days_per_week ?? undefined,
+		drivingStyle: row.driving_style ?? undefined,
+	};
 }
 
 async function setState(env: Env, chatId: number, state: ConversationState): Promise<void> {
-	// یک ساعت انقضا برای اینکه مکالمه‌های رهاشده تجمع پیدا نکنن
-	await env.BOT_STATE.put(stateKey(chatId), JSON.stringify(state), { expirationTtl: 3600 });
+	await env.DB.prepare(
+		`INSERT INTO conversation_state (chat_id, step, car, daily_km, days_per_week, driving_style, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(chat_id) DO UPDATE SET
+		   step = excluded.step,
+		   car = excluded.car,
+		   daily_km = excluded.daily_km,
+		   days_per_week = excluded.days_per_week,
+		   driving_style = excluded.driving_style,
+		   updated_at = excluded.updated_at`
+	)
+		.bind(
+			chatId,
+			state.step,
+			state.car ?? null,
+			state.dailyKm ?? null,
+			state.daysPerWeek ?? null,
+			state.drivingStyle ?? null,
+			Date.now()
+		)
+		.run();
 }
 
 async function clearState(env: Env, chatId: number): Promise<void> {
-	await env.BOT_STATE.delete(stateKey(chatId));
+	await env.DB.prepare('DELETE FROM conversation_state WHERE chat_id = ?').bind(chatId).run();
 }
 
 // ---------------------------------------------------------------------------
